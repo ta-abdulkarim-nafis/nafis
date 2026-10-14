@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#13233F">
+<title>منصة نافس — مجمع الروابي</title>
+<style>
+  /* صفحة العبور: تعرض منصة نافس داخلها، فلا يظهر خلل جوجل مع الحسابات المتعددة */
+  html, body { margin: 0; height: 100%; background: #F4EFE3; }
+  #wait { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+          font: 16px/1.7 Tahoma, "Segoe UI", sans-serif; color: #13233F; text-align: center; padding: 24px; box-sizing: border-box; }
+  #wait b { font-size: 22px; }
+  .dot { width: 46px; height: 46px; border-radius: 50%; border: 5px solid #E8C062; border-top-color: #13233F; animation: r 1s linear infinite; }
+  @keyframes r { to { transform: rotate(360deg); } }
+  #wait a { color: #1C6FB8; font-size: 14px; visibility: hidden; }
+  iframe { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; background: transparent; }
+</style>
+</head>
+<body>
+<div id="wait"><div class="dot"></div><b>منصة نافس</b><span>مجمع الروابي</span>
+  <a id="direct" href="#" target="_top">لم تظهر الصفحة؟ اضغط هنا</a></div>
+<script>
+  // رابط تطبيق الويب (ينتهي بـ /exec). يُغيَّر هنا فقط إن تغيّر رابط النشر.
+  var EXEC = 'https://script.google.com/macros/s/AKfycbxj-l4sb_6h45bmM1Akj0UVyHtq1MfW5X_2VPOrwNzxPCM4RoJLqIudNzNkadnctjUWVg/exec';
+  var url = EXEC + (location.search || '');
+  var f = document.createElement('iframe');
+  f.src = url;
+  f.title = 'منصة نافس';
+  f.allow = 'clipboard-write; fullscreen; camera';
+  document.body.appendChild(f);
+  document.getElementById('direct').href = url;
+  setTimeout(function () { document.getElementById('direct').style.visibility = 'visible'; }, 8000);
+</script>
+</body>
+</html>
