@@ -25,9 +25,13 @@
   var EXEC = 'https://script.google.com/macros/s/AKfycbxj-l4sb_6h45bmM1Akj0UVyHtq1MfW5X_2VPOrwNzxPCM4RoJLqIudNzNkadnctjUWVg/exec';
   var url = EXEC + (location.search || '');
   var f = document.createElement('iframe');
-  f.src = url;
+  // «بلا بيانات اعتماد»: يفتح المنصة داخل الصفحة كأنه تصفّح متخفٍّ، فلا يتدخل حساب جوجل الثاني (Chrome 110 فأحدث)
+  f.setAttribute('credentialless', '');
+  f.credentialless = true;
+  f.referrerPolicy = 'no-referrer';
   f.title = 'منصة نافس';
   f.allow = 'clipboard-write; fullscreen; camera';
+  f.src = url;   // يُضبط بعد الخاصية حتى تسري على التحميل الأول
   document.body.appendChild(f);
   document.getElementById('direct').href = url;
   setTimeout(function () { document.getElementById('direct').style.visibility = 'visible'; }, 8000);
