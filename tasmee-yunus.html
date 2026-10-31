@@ -39,6 +39,7 @@ body{display:flex;flex-direction:column;height:100dvh}
 .q{color:var(--gold)}
 .w.missed{color:var(--red)}
 .w.green{color:#14843a}
+.w.unheard{color:#8a8a8a}
 .w.missed.green{color:#14843a}
 .w.hintw{color:var(--red);background:rgba(198,40,40,.08)}
 .w.cur{background:rgba(46,125,91,.14);box-shadow:0 0 0 2px rgba(46,125,91,.28) inset}
@@ -260,7 +261,7 @@ function reveal(i){
   if(lastWordOfVerse[w.v]===i) (ends[w.v]||[]).forEach(e=>e.classList.add('shown'));
 }
 function resetTo(start){
-  words.forEach((w,i)=>{ w.mist=false; w.el.classList.remove('shown','missed','cur','err','hintw','green'); if(i<start) reveal(i); });
+  words.forEach((w,i)=>{ w.mist=false; w.el.classList.remove('shown','missed','cur','err','hintw','green','unheard'); if(i<start) reveal(i); });
   Object.keys(ends).forEach(v=>ends[v].forEach(e=>e.classList.toggle('shown',lastWordOfVerse[v]<start)));
   j=start; fresh=true; mistakes=[]; resetStream(); clearCarry(); greens=[];
   updateUI(true); save();
@@ -292,7 +293,7 @@ let greens=[];
 function clearGreens(){ greens.forEach(i=>words[i].el.classList.remove('green')); greens=[]; }
 function advance(k){
   clearGreens();
-  for(let t=0;t<k && j<words.length;t++){ reveal(j); words[j].el.classList.add('green'); greens.push(j); j++; }
+  for(let t=0;t<k && j<words.length;t++){ reveal(j); reveal2(j); words[j].el.classList.add('green'); greens.push(j); j++; }
   fresh=false;
   if(j>=words.length) finish(); else setMsg('','ok');
   updateUI(true); save();
@@ -309,6 +310,14 @@ function markWrong(k,heard){
   if(j>=words.length) finish();
   updateUI(true); save();
 }
+// the recognizer lost a stretch of audio (the reader is clearly further on): show it grey, not as mistakes
+function markUnheard(k){
+  clearGreens();
+  for(let t=0;t<k && j<words.length;t++){ reveal(j); if(!words[j].mist) words[j].el.classList.add('unheard'); j++; }
+  fresh=false; if(j>=words.length) finish();
+  updateUI(true); save();
+}
+function reveal2(i){ words[i].el.classList.remove('unheard'); }
 // the reader went back to an earlier place: follow him
 function jumpBack(to){
   clearGreens(); j=to; fresh=false;
@@ -356,63 +365,89 @@ function resync(toks,i,isFinal){
   return null;
 }
 
-/* ---------- recognizer stream handling (index-free, Android-safe) ---------- */
-let prevToks=[], cons=0;
-function resetStream(){ prevToks=[]; cons=0; }
-const tokenize=s=>(s||'').split(/\s+/).map(norm).filter(Boolean);
-const diag=[];
-function logDiag(heard,isFinal,note){
-  const exp=words.slice(j,j+4).map(w=>norm(w.t)).join(' ');
-  diag.push((isFinal?'نهائي':'مؤقت')+' | سمع: '+heard+' | المتوقع: '+exp+(note?' | '+note:''));
-  if(diag.length>120) diag.shift();
-}
 // tight run: n tokens from ti equal n words from wj (strict-ish, for jumps)
 function trun(toks,ti,wj,n){ for(let k=0;k<n;k++){ if(ti+k>=toks.length||wj+k<0||wj+k>=words.length||!tight(toks[ti+k],words[wj+k].n)) return false; } return true; }
 // find where the reader is: forward (skipped/wrong words) or backward (re-reading)
 function findAnchor(toks,i){
-  // ahead: smallest total of (dropped tokens + skipped words) first; long skips need stronger evidence
-  for(let c=1;c<=9;c++) for(let di=0;di<=Math.min(c,4);di++){
+  for(let c=1;c<=9;c++) for(let di=0;di<=Math.min(c,4);di++){          // near ahead
     const dw=c-di, ti=i+di, wj=j+dw;
     if(ti>=toks.length || wj>=words.length || dw>6) continue;
     if(dw<=2 ? run(toks,ti,wj,2) : trun(toks,ti,wj,3)) return {ti,wj};
   }
-  for(let ti=i; ti<Math.min(toks.length,i+4); ti++)                                                       // behind
+  for(let ti=i; ti<Math.min(toks.length,i+4); ti++)                    // far ahead (recognizer dropped audio)
+    for(let wj=j+7; wj<Math.min(words.length,j+90); wj++) if(trun(toks,ti,wj,3)) return {ti,wj};
+  for(let ti=i; ti<Math.min(toks.length,i+4); ti++)                    // behind
     for(let wj=j-1; wj>=Math.max(0,j-300); wj--){ if(trun(toks,ti,wj,(j-wj)<=30?2:3)) return {ti,wj}; }
   return null;
 }
 let carry=[], carryTimer=null;
 function clearCarry(){ carry=[]; clearTimeout(carryTimer); }
-function processText(text,isFinal){
-  const toks=tokenize(text);
-  $('heard').textContent = text ? 'سمعتُ: '+text : '';
-  let p=0; while(p<toks.length && p<prevToks.length && toks[p]===prevToks[p]) p++;
-  const i0=Math.min(p,cons), cl=carry.length;
-  const vt=carry.concat(toks.slice(i0));
+let finDone=0, intDone=0;               // tokens already handled: from final results / from the live (interim) part
+function resetStream(){ finDone=0; intDone=0; }
+// interim (still changing) words: only move forward on clear matches; never jump or mark red
+function runInterim(toks,from){
+  let i=from;
+  while(i<toks.length-0 && j<words.length){
+    const c=consumeOne(toks,i);
+    if(c){ i+=c.used; if(c.adv) advance(c.adv); continue; }
+    const r=resync(toks,i,false);
+    if(r && r.why!=='split'){ i+=r.used; if(r.adv) advance(r.adv); continue; }
+    let far=null;
+    for(let ti=i; ti<Math.min(toks.length-2,i+3) && !far; ti++) for(let wj=j+4; wj<Math.min(words.length,j+90); wj++) if(trun(toks,ti,wj,3)){ far={ti,wj}; break; }
+    if(far){ markUnheard(far.wj-j); i=far.ti; continue; }
+    break;
+  }
+  return i;
+}
+// settled words: full decisions (red / follow back / wait)
+function runFinal(vt){
   let i=0, note='', newCarry=null;
   while(i<vt.length && j<words.length){
     const c=consumeOne(vt,i);
     if(c){ i+=c.used; if(c.adv) advance(c.adv); continue; }
-    let back=-1; for(let wj=j-1; wj>=Math.max(0,j-30); wj--) if(trun(vt,i,wj,2)){ back=wj; break; }   // re-reading just behind
+    let back=-1; for(let wj=j-1; wj>=Math.max(0,j-30); wj--) if(trun(vt,i,wj,2)){ back=wj; break; }
     if(back>=0){ note+=' [رجوع إلى '+words[back].n+']'; jumpBack(back); continue; }
-    const r=resync(vt,i,isFinal);
+    const r=resync(vt,i,true);
     if(r){ note+=' ['+r.why+': '+vt[i]+']'; i+=r.used; if(r.adv) advance(r.adv); continue; }
     const a=findAnchor(vt,i);
     if(a){
-      if(a.wj>j){ note+=' [أحمر: '+words.slice(j,a.wj).map(w=>w.n).join(' ')+']'; markWrong(a.wj-j, vt.slice(i,a.ti).join(' ')); }
+      if(a.wj>j+3){ note+=' [لم يُسمع: '+(a.wj-j)+' كلمة]'; markUnheard(a.wj-j); }
+      else if(a.wj>j){ note+=' [أحمر: '+words.slice(j,a.wj).map(w=>w.n).join(' ')+']'; markWrong(a.wj-j, vt.slice(i,a.ti).join(' ')); }
       else { note+=' [رجوع إلى '+words[a.wj].n+']'; jumpBack(a.wj); }
       i=a.ti; continue;
     }
-    if(!isFinal) break;                                          // wait for more words
-    if(cl===0 && vt.length-i<=2){ newCarry=vt.slice(i); note+=' [انتظار: '+newCarry.join(' ')+']'; }
+    if(vt.length-i<=2){ newCarry=vt.slice(i); note+=' [انتظار: '+newCarry.join(' ')+']'; }
     else { note+=' [أحمر: '+words[j].n+']'; markWrong(1, vt[i]); }
     i=vt.length; break;
   }
-  if(newCarry){ carry=newCarry; clearTimeout(carryTimer);
-    carryTimer=setTimeout(()=>{ if(carry.length && j<words.length){ const t=carry[0]; carry=[]; logDiag('(توقف)',true,' [أحمر: '+words[j].n+']'); markWrong(1,t); } },2500); }
-  else if(cl>0 && (i>=cl || isFinal)) clearCarry();
-  if(isFinal || note) logDiag(text,isFinal,note);
-  prevToks=toks; cons=isFinal?toks.length:i0+Math.max(0,i-cl);
+  return {note,newCarry};
 }
+function processEvent(finalText, interimText){
+  const fin=tokenize(finalText), live=tokenize(interimText);
+  $('heard').textContent = (finalText+' '+interimText).trim() ? 'سمعتُ: '+(finalText.split(/\s+/).slice(-6).join(' ')+' '+interimText).trim() : '';
+  if(fin.length<finDone){ finDone=0; intDone=0; }               // recognizer started over
+  const newly=fin.slice(finDone);
+  if(newly.length){
+    const skip=Math.min(intDone,newly.length);                // these were already followed while still live
+    const vt=carry.concat(newly.slice(skip)); const hadCarry=carry.length>0; clearCarry();
+    const {note,newCarry}=runFinal(vt);
+    if(newCarry){ carry=newCarry; clearTimeout(carryTimer); carryTimer=setTimeout(()=>{ carry=[]; },6000); }
+    logDiag(newly.join(' '),true,note+(skip?' [تابعتُها مسبقاً: '+skip+']':''));
+    finDone=fin.length; intDone=0;
+  }
+  if(live.length>intDone){ intDone=runInterim(live,intDone); }
+}
+const tokenize=s=>(s||'').split(/\s+/).map(norm).filter(Boolean);
+const diag=[];
+function logDiag(heard,isFinal,note){
+  const exp=words.slice(j,j+4).map(w=>norm(w.t)).join(' ');
+  diag.push((isFinal?'نهائي':'مؤقت')+' | سمع: '+heard+' | المتوقع: '+exp+(note?' | '+note:''));
+  if(diag.length>150) diag.shift();
+}
+// test hook: final=true → settled text, else live text
+let __simFin='';
+window.__feed=(text,final=true)=>{ if(final){ __simFin=text; processEvent(text,''); } else processEvent(__simFin,text); };
+window.__resetSim=()=>{ __simFin=''; resetStream(); };
 
 /* ---------- microphone: cleaner, louder signal ---------- */
 let micStream=null, actxIn=null, procTrack=null, analyser=null, meterRaf=0, useTrack=true;
@@ -464,9 +499,9 @@ function startRec(){
   resetStream();
   rec.onresult=e=>{
     lastResultAt=Date.now();
-    let txt='', fin=true;
-    for(let r=0;r<e.results.length;r++){ txt+=' '+e.results[r][0].transcript; if(!e.results[r].isFinal) fin=false; }
-    processText(txt.trim(),fin);
+    let fin='', live='';
+    for(let r=0;r<e.results.length;r++){ if(e.results[r].isFinal) fin+=' '+e.results[r][0].transcript; else live+=' '+e.results[r][0].transcript; }
+    processEvent(fin.trim(),live.trim());
   };
   rec.onerror=e=>{
     if(e.error==='not-allowed'||e.error==='service-not-allowed'){ stopListening(); setMsg('اسمح للمتصفح باستخدام الميكروفون من إعدادات الموقع','bad'); }
@@ -502,7 +537,6 @@ function finish(){
   stopListening(); setMsg('صدق الله العظيم — أتممت سورة يونس','ok');
   beep(660,.2); setTimeout(openMistakes,600);
 }
-window.__feed=(text,final=true)=>processText(text,final);   // test hook
 
 /* ---------- controls ---------- */
 const chkHint=$('chkHint'),chkCur=$('chkCur'),chkVib=$('chkVib'),chkBeep=$('chkBeep');
