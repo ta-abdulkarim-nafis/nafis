@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <meta name="theme-color" content="#1f5f4a">
 <title>تسميع سورة يونس</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap" rel="stylesheet">
 <style>
 :root{--g:#1f5f4a;--g2:#2e7d5b;--bg:#efe9da;--ink:#111;--red:#c62828;--gold:#b8933f}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -16,14 +18,13 @@ header .stat{font-size:12.5px;background:rgba(255,255,255,.15);padding:3px 8px;b
 header button{background:none;border:0;color:#fff;font-size:21px;padding:0 4px}
 #stage{flex:1 1 auto;display:flex;align-items:center;justify-content:center;padding:4px;min-height:0;position:relative}
 #pages{display:flex;gap:var(--gap,0px);direction:rtl;align-items:stretch}
-.page{display:none;direction:rtl;position:relative;background:#fffdf6;padding:calc(var(--fs)*.55) calc(var(--fs)*.55) calc(var(--fs)*.35);
-  border:calc(var(--fs)*.16) solid #3d8a5f;
-  box-shadow:inset 0 0 0 calc(var(--fs)*.08) #fffdf6, inset 0 0 0 calc(var(--fs)*.14) var(--gold), 0 0 0 calc(var(--fs)*.07) var(--gold), 0 3px 12px rgba(0,0,0,.12);
-  border-radius:3px}
-.page.on{display:block}
-.two .page.r{border-left-width:calc(var(--fs)*.08)}
-.two .page.l{border-right-width:calc(var(--fs)*.08)}
-.ph{display:flex;justify-content:space-between;font-family:"Amiri","Traditional Arabic",serif;font-size:calc(var(--fs)*.42);color:#5b4a1e;height:calc(var(--fs)*.75);align-items:flex-start;padding:0 .4em}
+.page{display:none;direction:rtl;position:relative;flex-direction:column}
+.page.on{display:flex}
+.ph{display:flex;justify-content:space-between;font-family:"Amiri","Traditional Arabic",serif;font-size:calc(var(--fs)*.5);color:#1d1d1d;height:calc(var(--fs)*.85);align-items:center;padding:0 calc(var(--fs)*.7)}
+.frame{padding:var(--band);background-image:var(--orn);background-size:var(--band) var(--band);background-color:#cfe7c4;
+  border:calc(var(--fs)*.05) solid #2f6b45;box-shadow:0 0 0 calc(var(--fs)*.06) #fff,0 0 0 calc(var(--fs)*.09) #2f6b45,0 3px 12px rgba(0,0,0,.18)}
+.inner{background:#fffef7;border:calc(var(--fs)*.05) solid #2f6b45;box-shadow:0 0 0 calc(var(--fs)*.07) #e8d48f,0 0 0 calc(var(--fs)*.11) #2f6b45;padding:calc(var(--fs)*.28) calc(var(--fs)*.32) calc(var(--fs)*.22)}
+#pages.two{gap:calc(var(--fs)*.25)}
 .line{display:flex;justify-content:space-between;align-items:center;white-space:nowrap;line-height:1;height:var(--lh)}
 .line.center{justify-content:center}
 .w,.e,.q,.x{font-size:var(--fs);border-radius:4px}
@@ -37,9 +38,10 @@ header button{background:none;border:0;color:#fff;font-size:21px;padding:0 4px}
 .w.err{animation:err .5s 2}
 @keyframes err{0%,100%{background:rgba(198,40,40,0)}50%{background:rgba(198,40,40,.38)}}
 .peek .w:not(.shown),.peek .e:not(.shown),.hint .w:not(.shown),.hint .e:not(.shown){color:rgba(0,0,0,.17)}
-.sura{font-family:Q0;font-size:calc(var(--fs)*1.02);color:var(--ink);border:calc(var(--fs)*.09) double var(--gold);border-radius:8px;padding:0 1.4em;line-height:1.25;background:#f4f0dc}
+.surabox{flex:1;display:flex;justify-content:center;align-items:center;height:calc(var(--lh)*.92);background-image:var(--orn);background-size:calc(var(--lh)*.92) calc(var(--lh)*.92);background-color:#cfe7c4;border:calc(var(--fs)*.05) solid #2f6b45;box-shadow:inset 0 0 0 calc(var(--fs)*.05) #e8d48f}
+.sura{font-family:Q0;font-size:calc(var(--fs)*.95);color:#1d1d1d;background:#fffef7;border:calc(var(--fs)*.05) solid #2f6b45;box-shadow:0 0 0 calc(var(--fs)*.05) #e8d48f;border-radius:999px;padding:0 1.6em;line-height:1.15}
 .bsm{font-family:Q1;font-size:var(--fs);color:var(--ink)}
-.pgno{text-align:center;font-size:calc(var(--fs)*.42);color:#6b5a2c;height:calc(var(--fs)*.55);line-height:calc(var(--fs)*.7)}
+.pgno{align-self:center;margin-top:calc(var(--fs)*.22);font-family:"Amiri",serif;font-weight:700;font-size:calc(var(--fs)*.5);color:#1d1d1d;height:calc(var(--fs)*.7);line-height:calc(var(--fs)*.7)}
 .f16{font-family:Q16}.f17{font-family:Q17}.f1{font-family:Q1}
 #heard{flex:0 0 auto;text-align:center;font-size:13px;color:#555;min-height:20px;padding:0 10px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 #msg{flex:0 0 auto;text-align:center;font-size:14.5px;font-weight:600;min-height:22px;padding:0 10px}
@@ -105,9 +107,9 @@ footer button span{font-size:19px;line-height:1}
   <div class="note">«تلقائي»: صفحتان متجاورتان عند تدوير الجوال بالعرض، وصفحة واحدة عند حمله طولياً.</div>
   <label>حساسية الأخطاء</label>
   <div class="seg" id="segStrict">
-    <button data-v="0">متساهلة</button><button data-v="1">متوسطة</button><button data-v="2">صارمة</button>
+    <button data-v="0">حدر (خفيفة)</button><button data-v="1">متوسطة</button><button data-v="2">صارمة</button>
   </div>
-  <div class="note">إذا كان الجهاز يخطئ في سماعك فاختر «متساهلة». الكلمة التي يسمعها الجهاز خطأً ثم تأتي بعدها الكلمات الصحيحة تُقبل في «المتساهلة» و«المتوسطة».</div>
+  <div class="note">«حدر»: للقراءة السريعة؛ يقبل الكلمة إذا التقط ملامحها العامة، ولا يعدّها خطأً إلا إذا تغيّرت تغيّراً واضحاً.</div>
   <div class="row"><span>إظهار الكلمات المخفية بلون خافت جداً (تلميح)</span><input type="checkbox" id="chkHint"></div>
   <div class="row"><span>تمييز موضع الكلمة الحالية</span><input type="checkbox" id="chkCur" checked></div>
   <div class="row"><span>الاهتزاز عند الخطأ</span><input type="checkbox" id="chkVib"></div>
@@ -168,31 +170,53 @@ function lev(a,b){
 }
 let strict=0;
 function tight(a,b){ if(a===b) return true; const sa=skel(a),sb=skel(b); if(sa.length>=3&&sa===sb) return true; return Math.max(a.length,b.length)>=5 && lev(a,b)<=1; }
+const core=x=>x.replace(/^(و|ف)?(ال|لل|ل|ب)?/,'');
+function sim0(a,b){ // fast-reading ("حدر") tolerance: accept unless the word changed substantially
+  const ca=core(a)||a, cb=core(b)||b, L=Math.max(ca.length,cb.length);
+  const d=Math.min(lev(ca,cb), lev(skel(ca),skel(cb)));
+  if(L<=2) return d<=1;
+  if(Math.min(ca.length,cb.length)>=3 && (ca.startsWith(cb)||cb.startsWith(ca))) return true;   // clipped ending
+  if(L>=4 && ca.slice(0,-1)===cb.slice(0,-1)) return true;                                     // ending changed (waqf/i'rab)
+  if(L<=4) return d<=1;
+  if(L<=6) return d<=2;
+  return d<=Math.ceil(L*0.4);
+}
 function same(a,b){
   if(!a||!b) return false;
   if(a===b) return true;
   const sa=skel(a), sb=skel(b);
   if(sa.length>=3 && sa===sb) return true;
-  // definite article / conjunction attached or dropped by the recognizer
+  if(strict===0) return sim0(a,b);
   const strip=x=>x.replace(/^(و|ف)?(ال|لل)?/,'');
   if(strict<2 && strip(a)===strip(b) && strip(a).length>=3) return true;
-  const L=Math.max(a.length,b.length), d=Math.min(lev(a,b), lev(sa,sb)+0);
+  const L=Math.max(a.length,b.length), d=Math.min(lev(a,b), lev(sa,sb));
   if(strict===2) return L>=6 && d<=1;
-  if(strict===1) return (L>=4 && d<=1) || (L>=6 && d<=2);
-  return (L===3 && d<=1) || (L>=4 && L<=6 && d<=1) || (L>=7 && d<=Math.floor(L/3));
+  return (L>=4 && d<=1) || (L>=6 && d<=2);
 }
+
+/* ---------- ornament (original floral band) ---------- */
+(function(){
+  const pet=(cx,cy,sc)=>{ let g=`<g transform='translate(${cx} ${cy}) scale(${sc})'>`; for(let k=0;k<8;k++) g+=`<ellipse cy='-8' rx='3.4' ry='7.5' fill='%23f3b3c8' stroke='%23a8456b' stroke-width='.8' transform='rotate(${k*45})'/>`; return g+`<circle r='3.6' fill='%23f7d774' stroke='%23a8456b' stroke-width='.8'/></g>`; };
+  const leaf=(x,y,r)=>`<path transform='translate(${x} ${y}) rotate(${r})' d='M0 -9 Q5 -3 0 3 Q-5 -3 0 -9Z' fill='%2389bf73' stroke='%232f6b45' stroke-width='.8'/>`;
+  let s=`<svg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'><rect width='60' height='60' fill='%23cfe7c4'/>`+
+    `<g fill='none' stroke='%232f6b45' stroke-width='1.3'><circle cx='30' cy='30' r='19'/><circle cx='0' cy='0' r='11'/><circle cx='60' cy='0' r='11'/><circle cx='0' cy='60' r='11'/><circle cx='60' cy='60' r='11'/></g>`+
+    leaf(30,6,0)+leaf(30,54,180)+leaf(6,30,270)+leaf(54,30,90)+
+    pet(30,30,1)+pet(0,0,.55)+pet(60,0,.55)+pet(0,60,.55)+pet(60,60,.55)+`</svg>`;
+  document.documentElement.style.setProperty('--orn',`url("data:image/svg+xml,${s.replace(/"/g,"'").replace(/</g,'%3C').replace(/>/g,'%3E')}")`);
+})();
 
 /* ---------- build pages ---------- */
 const words=[], ends={}, verseFirst={}, lastWordOfVerse={};
 const pagesEl=$('pages'); const pageDivs=[];
 DATA.forEach((pg,pi)=>{
   const d=document.createElement('div'); d.className='page '+(pg.p%2?'r':'l');
-  const ph=document.createElement('div'); ph.className='ph'; ph.innerHTML='<span>الجزء '+pg.j+'</span><span>سورة '+pg.s+'</span>'; d.appendChild(ph);
+  const ph=document.createElement('div'); ph.className='ph'; ph.innerHTML='<span>الجُزْءُ '+pg.j+'</span><span>سُورَةُ '+pg.s+'</span>'; d.appendChild(ph);
+  const fr=document.createElement('div'); fr.className='frame'; const inner=document.createElement('div'); inner.className='inner'; fr.appendChild(inner); d.appendChild(fr);
   pg.l.forEach(line=>{
     const ld=document.createElement('div'); ld.className='line';
     line.forEach(w=>{
       const s=document.createElement('span'); s.textContent=w.c;
-      if(w.k==='s'){s.className='sura'; ld.classList.add('center');}
+      if(w.k==='s'){ s.className='sura'; const bx=document.createElement('span'); bx.className='surabox'; bx.appendChild(s); ld.classList.add('center'); ld.appendChild(bx); return; }
       else if(w.k==='b'){s.className='bsm'; ld.classList.add('center');}
       else if(w.x){ s.className='x f'+w.f; }
       else{
@@ -202,7 +226,7 @@ DATA.forEach((pg,pi)=>{
       }
       ld.appendChild(s);
     });
-    d.appendChild(ld);
+    inner.appendChild(ld);
   });
   const no=document.createElement('div'); no.className='pgno'; no.textContent=AR(pg.p); d.appendChild(no);
   pagesEl.appendChild(d); pageDivs.push(d);
@@ -210,7 +234,7 @@ DATA.forEach((pg,pi)=>{
 
 /* ---------- state ---------- */
 let j=0, attempts=0, mistakes=[], viewPage=1, fresh=true, hinted=false, viewMode='auto', twoUp=false;
-const LS='tasmee_yunus_v2';
+const LS='tasmee_yunus_v3';
 function getOpts(){return {hint:chkHint.checked,cur:chkCur.checked,vib:chkVib.checked,beep:chkBeep.checked,view:viewMode};}
 function save(){ try{localStorage.setItem(LS,JSON.stringify({j,mistakes,strict,opt:getOpts()}));}catch(_){} }
 function reveal(i){
@@ -221,7 +245,7 @@ function reveal(i){
 function resetTo(start){
   words.forEach((w,i)=>{ w.mist=false; w.el.classList.remove('shown','missed','cur','err','hintw'); if(i<start) reveal(i); });
   Object.keys(ends).forEach(v=>ends[v].forEach(e=>e.classList.toggle('shown',lastWordOfVerse[v]<start)));
-  j=start; attempts=0; fresh=true; hinted=false; replay=null; mistakes=[]; resetStream();
+  j=start; attempts=0; fresh=true; hinted=false; replay=null; mistakes=[]; resetStream(); clearCarry();
   updateUI(true); save();
 }
 function setMsg(t,cls){const m=$('msg'); m.textContent=t; m.className=cls||'';}
@@ -317,10 +341,11 @@ function resync(toks,i,isFinal){
   if(left<1+need && !(isFinal && left>=2)) return null;
   const e=words[j].n, t=toks[i];
   if(strict<2 && run(toks,i+1,j+1,need)){                         // misheard word
-    const se=skel(e), stt=skel(t), L=Math.max(se.length,stt.length,1), d=lev(se,stt);
-    if(d<=(strict===0?Math.max(1,Math.floor(L/3)):Math.floor(L/4))) return {used:1,adv:1,why:'misheard'};
+    const se=skel(core(e)||e), stt=skel(core(t)||t), L=Math.max(se.length,stt.length,1), d=lev(se,stt);
+    if(d<=(strict===0?Math.floor(L*0.5):Math.floor(L/4))) return {used:1,adv:1,why:'misheard'};
   }
-  if(strict<2 && run(toks,i,j+1,Math.min(2,left)) && e.length<=(strict===0?3:2)) return {used:0,adv:1,why:'dropped'};
+  if(strict<2 && run(toks,i,j+1,Math.min(2,left)) && e.length<=(strict===0?4:2)) return {used:0,adv:1,why:'dropped'};
+  if(strict===0 && run(toks,i,j+1,3)) return {used:0,adv:1,why:'dropped'};
   if(run(toks,i+1,j,need)) return {used:1,adv:0,why:'extra'};
   if(strict===0 && run(toks,i+2,j+1,need)) return {used:2,adv:1,why:'split'};
   return null;
@@ -336,22 +361,33 @@ function logDiag(heard,isFinal,note){
   diag.push((isFinal?'نهائي':'مؤقت')+' | سمع: '+heard+' | المتوقع: '+exp+(note?' | '+note:''));
   if(diag.length>120) diag.shift();
 }
+let carry=[], carryTimer=null;
+function clearCarry(){ carry=[]; clearTimeout(carryTimer); }
 function processText(text,isFinal){
   const toks=tokenize(text);
   $('heard').textContent = text ? 'سمعتُ: '+text : '';
   let p=0; while(p<toks.length && p<prevToks.length && toks[p]===prevToks[p]) p++;
-  let i=Math.min(p,cons), note='';
-  while(i<toks.length && j<words.length){
-    const sr=replay, c=consumeOne(toks,i);
+  const i0=Math.min(p,cons), cl=carry.length;
+  const vt=carry.concat(toks.slice(i0));
+  let i=0, note='', newCarry=null;
+  while(i<vt.length && j<words.length){
+    const sr=replay, c=consumeOne(vt,i);
     if(c){ i+=c.used; if(c.adv) advance(c.adv); continue; }
     replay=sr;
-    const r=resync(toks,i,isFinal);
-    if(r){ note+=' ['+r.why+': '+toks[i]+']'; i+=r.used; if(r.adv) advance(r.adv); continue; }
-    if(isFinal){ note+=' [خطأ: '+toks[i]+']'; registerError(toks[i]); i=toks.length; }
+    const r=resync(vt,i,isFinal);
+    if(r){ note+=' ['+r.why+': '+vt[i]+']'; i+=r.used; if(r.adv) advance(r.adv); continue; }
+    if(isFinal){
+      if(cl===0 && vt.length-i<=2 && strict<2){ newCarry=vt.slice(i); note+=' [انتظار: '+newCarry.join(' ')+']'; }
+      else { note+=' [خطأ: '+vt[i]+']'; registerError(vt[i]); }
+      i=vt.length;
+    }
     break;
   }
+  if(newCarry){ carry=newCarry; clearTimeout(carryTimer);
+    carryTimer=setTimeout(()=>{ if(carry.length){ const t=carry[0]; carry=[]; logDiag('(توقف بعد كلمة)',true,' [خطأ: '+t+']'); registerError(t); } },2500); }
+  else if(cl>0 && (i>=cl || isFinal)) clearCarry();
   if(isFinal || note) logDiag(text,isFinal,note);
-  prevToks=toks; cons=isFinal?toks.length:i;
+  prevToks=toks; cons=isFinal?toks.length:i0+Math.max(0,i-cl);
 }
 
 /* ---------- speech recognition ---------- */
@@ -437,15 +473,16 @@ function layout(){
   const st=$('stage'); const W=st.clientWidth-30, H=st.clientHeight-6;
   twoUp = viewMode==='2' || (viewMode==='auto' && W>H*1.05);
   pagesEl.classList.toggle('two',twoUp);
-  const per = twoUp ? W/2 : Math.min(W,640);
-  // page width ≈ maxW*fs/100 + 1.4fs (padding+border); page height ≈ 15*lh + 1.8fs
-  let fs = per/(maxW/100+1.45);
+  const per = twoUp ? (W/2) : Math.min(W,640);
+  // page width = text + inner padding/borders (~0.95fs) + ornament band x2 (1.1fs) + frame borders (~0.3fs)
+  let fs = per/(maxW/100+2.85);
   let lh = fs*1.62;
-  const hNeed = 15*lh + fs*1.95;
+  const hNeed = 15*lh + fs*4.7;
   if(hNeed>H){ const k=H/hNeed; fs*=k; lh*=k; }
   pagesEl.style.setProperty('--fs',fs.toFixed(2)+'px');
   pagesEl.style.setProperty('--lh',lh.toFixed(2)+'px');
-  pageDivs.forEach(d=>d.style.width=(maxW*fs/100+fs*1.1+fs*0.32).toFixed(1)+'px');
+  pagesEl.style.setProperty('--band',(fs*.75).toFixed(2)+'px');
+  pageDivs.forEach(d=>d.style.width=(maxW*fs/100+fs*2.6).toFixed(1)+'px');
   showPage(j<words.length?words[j].pg:viewPage);
 }
 
