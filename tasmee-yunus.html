@@ -57,6 +57,7 @@ body{display:flex;flex-direction:column;height:100dvh}
 #msg.bad{color:var(--red)}#msg.ok{color:var(--g2)}
 
 #side #mic{width:54px;height:54px;border-radius:50%;background:var(--g);color:#fff;font-size:24px;justify-content:center;box-shadow:0 3px 10px rgba(31,95,74,.4)}
+#meter{--lv:0;border-radius:50%;padding:3px;background:conic-gradient(#2e7d5b calc(var(--lv)*360deg),#e6efe9 0)}
 #side #mic.on{background:var(--red);animation:pulse 1.4s infinite}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(198,40,40,.5)}70%{box-shadow:0 0 0 14px rgba(198,40,40,0)}100%{box-shadow:0 0 0 0 rgba(198,40,40,0)}}
 .nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(31,95,74,.3);color:#fff;border:0;width:22px;height:46px;border-radius:8px;font-size:18px;z-index:2;padding:0}
@@ -97,7 +98,7 @@ body{display:flex;flex-direction:column;height:100dvh}
   <div class="stat bad" id="stErr">الأخطاء ٠</div>
   <button id="btnFrom"><span>↺</span>من آية</button>
   <button id="btnMist"><span>📋</span>أخطائي</button>
-  <button id="mic" aria-label="ابدأ التسميع">🎙</button>
+  <div id="meter"><button id="mic" aria-label="ابدأ التسميع">🎙</button></div>
   <button id="btnPeek"><span>📖</span>انظر</button>
   <button id="btnShow"><span>👁</span>أظهر</button>
 </aside>
@@ -115,6 +116,9 @@ body{display:flex;flex-direction:column;height:100dvh}
     <button data-v="0">حدر (خفيفة)</button><button data-v="1">متوسطة</button><button data-v="2">صارمة</button>
   </div>
   <div class="note">«حدر»: للقراءة السريعة؛ يقبل الكلمة إذا التقط ملامحها العامة، ولا يعدّها خطأً إلا إذا تغيّرت تغيّراً واضحاً.</div>
+  <label>تقوية صوت القارئ (للقراءة من بُعد)</label>
+  <div class="seg" id="segBoost"><button data-v="1">عادي</button><button data-v="2">متوسط</button><button data-v="3.5">قوي</button></div>
+  <div class="note">الحلقة الخضراء حول زر الميكروفون تتحرك مع صوتك؛ إن كانت ضعيفة وأنت بعيد فاختر «قوي».</div>
   <div class="row"><span>إظهار الكلمات المخفية بلون خافت جداً (تلميح)</span><input type="checkbox" id="chkHint"></div>
   <div class="row"><span>تمييز موضع الكلمة الحالية</span><input type="checkbox" id="chkCur" checked></div>
   <div class="row"><span>الاهتزاز عند الخطأ</span><input type="checkbox" id="chkVib"></div>
@@ -248,7 +252,7 @@ DATA.forEach((pg,pi)=>{
 /* ---------- state ---------- */
 let j=0, mistakes=[], viewPage=1, fresh=true, viewMode='auto', twoUp=false;
 const LS='tasmee_yunus_v3';
-function getOpts(){return {hint:chkHint.checked,cur:chkCur.checked,vib:chkVib.checked,beep:chkBeep.checked,view:viewMode};}
+function getOpts(){return {hint:chkHint.checked,cur:chkCur.checked,vib:chkVib.checked,beep:chkBeep.checked,view:viewMode,boost};}
 function save(){ try{localStorage.setItem(LS,JSON.stringify({j,mistakes,strict,opt:getOpts()}));}catch(_){} }
 function reveal(i){
   const w=words[i]; w.el.classList.add('shown'); w.el.classList.remove('cur','err','hintw');
@@ -410,14 +414,56 @@ function processText(text,isFinal){
   prevToks=toks; cons=isFinal?toks.length:i0+Math.max(0,i-cl);
 }
 
+/* ---------- microphone: cleaner, louder signal ---------- */
+let micStream=null, actxIn=null, procTrack=null, analyser=null, meterRaf=0, useTrack=true;
+let boost=2;
+async function openMic(){
+  try{
+    micStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true,channelCount:1}});
+    actxIn=new (window.AudioContext||window.webkitAudioContext)();
+    const src=actxIn.createMediaStreamSource(micStream);
+    const hp=actxIn.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=110;     // remove hum / fan / traffic rumble
+    const lp=actxIn.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=7000;     // remove hiss above the voice
+    const pk=actxIn.createBiquadFilter(); pk.type='peaking'; pk.frequency.value=2500; pk.Q.value=0.9; pk.gain.value=4; // clarity of consonants
+    const comp=actxIn.createDynamicsCompressor(); comp.threshold.value=-42; comp.knee.value=20; comp.ratio.value=5; comp.attack.value=.005; comp.release.value=.2;
+    const g=actxIn.createGain(); g.gain.value=boost; window.__gain=g;                       // lift a distant voice
+    analyser=actxIn.createAnalyser(); analyser.fftSize=512;
+    const dst=actxIn.createMediaStreamDestination();
+    src.connect(hp); hp.connect(lp); lp.connect(pk); pk.connect(comp); comp.connect(g); g.connect(dst); g.connect(analyser);
+    procTrack=dst.stream.getAudioTracks()[0];
+    runMeter();
+  }catch(e){ console.warn('mic pipeline unavailable',e); procTrack=null; }
+}
+function closeMic(){
+  cancelAnimationFrame(meterRaf); $('meter').style.setProperty('--lv','0');
+  try{ micStream&&micStream.getTracks().forEach(t=>t.stop()); }catch(_){}
+  try{ actxIn&&actxIn.close(); }catch(_){}
+  micStream=null; actxIn=null; procTrack=null; analyser=null;
+}
+function runMeter(){
+  const buf=new Uint8Array(analyser.fftSize);
+  const tick=()=>{ if(!analyser) return; analyser.getByteTimeDomainData(buf); let m=0; for(const v of buf) m=Math.max(m,Math.abs(v-128)); $('meter').style.setProperty('--lv',Math.min(1,m/70).toFixed(2)); meterRaf=requestAnimationFrame(tick); };
+  tick();
+}
+
 /* ---------- speech recognition ---------- */
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-let rec=null, listening=false, wake=null;
+let rec=null, listening=false, wake=null, lastResultAt=0, watchdog=0, usePhrases=true;
+// hint the recognizer with the words that come next (where the browser supports it)
+function setPhrases(r){
+  if(!usePhrases || !('phrases' in r) || !window.SpeechRecognitionPhrase) return;
+  try{
+    const ph=[]; let v=j<words.length?words[j].v:109;
+    for(let vv=v; vv<=Math.min(109,v+2); vv++){ const t=words.filter(w=>w.v===vv).map(w=>w.n).join(' '); if(t) ph.push(new SpeechRecognitionPhrase(t,5.0)); }
+    r.phrases=ph;
+  }catch(_){}
+}
 function startRec(){
   rec=new SR(); rec.lang='ar-SA'; rec.continuous=true; rec.interimResults=true; rec.maxAlternatives=1;
+  setPhrases(rec);
   resetStream();
   rec.onresult=e=>{
-    // take the whole session text (Android may restart or duplicate result indices)
+    lastResultAt=Date.now();
     let txt='', fin=true;
     for(let r=0;r<e.results.length;r++){ txt+=' '+e.results[r][0].transcript; if(!e.results[r].isFinal) fin=false; }
     processText(txt.trim(),fin);
@@ -425,20 +471,30 @@ function startRec(){
   rec.onerror=e=>{
     if(e.error==='not-allowed'||e.error==='service-not-allowed'){ stopListening(); setMsg('اسمح للمتصفح باستخدام الميكروفون من إعدادات الموقع','bad'); }
     else if(e.error==='network'){ setMsg('التعرف على الصوت يحتاج اتصالاً بالإنترنت','bad'); }
+    else if(e.error==='phrases-not-supported'){ usePhrases=false; }
+    else if(e.error==='audio-capture' && useTrack){ useTrack=false; closeMic(); }   // device can't share the mic: fall back
   };
-  rec.onend=()=>{ if(listening) setTimeout(()=>{ if(listening){ try{startRec();}catch(_){} } },100); };
-  try{ rec.start(); }catch(_){}
+  rec.onend=()=>{ if(listening){ try{startRec();}catch(_){ setTimeout(()=>{ if(listening) try{startRec();}catch(_){} },300); } } };
+  try{ if(useTrack && procTrack && procTrack.readyState==='live') rec.start(procTrack); else rec.start(); }
+  catch(_){ try{ rec.start(); }catch(__){} }
 }
 async function startListening(){
   if(!SR){ setMsg('افتح الصفحة في Google Chrome ليعمل التسميع بالصوت','bad'); return; }
   if(j>=words.length) resetTo(0);
   listening=true; $('mic').classList.add('on'); setMsg('أنا أستمع… اقرأ من حفظك','ok');
   try{ wake=await navigator.wakeLock.request('screen'); }catch(_){}
+  if(useTrack) await openMic();
+  lastResultAt=Date.now();
   startRec();
+  clearInterval(watchdog);
+  watchdog=setInterval(()=>{   // if the recognizer silently hangs, restart it
+    if(listening && Date.now()-lastResultAt>12000){ lastResultAt=Date.now(); try{rec.abort();}catch(_){} }
+  },3000);
 }
 function stopListening(){
-  listening=false; $('mic').classList.remove('on');
+  listening=false; $('mic').classList.remove('on'); clearInterval(watchdog);
   try{ rec&&rec.stop(); }catch(_){}
+  closeMic();
   try{ wake&&wake.release(); }catch(_){} wake=null;
   if(j<words.length) setMsg('توقف التسميع — اضغط الميكروفون للمتابعة','');
 }
@@ -516,10 +572,12 @@ async function loadFonts(){
 }
 (async()=>{
   let st={}; try{ st=JSON.parse(localStorage.getItem(LS)||'{}'); }catch(_){}
+  if(st.opt&&st.opt.boost) boost=st.opt.boost;
   if(st.opt){ chkHint.checked=!!st.opt.hint; chkCur.checked=st.opt.cur!==false; chkVib.checked=!!st.opt.vib; chkBeep.checked=!!st.opt.beep; viewMode=st.opt.view||'auto'; }
   if(typeof st.strict==='number') strict=st.strict;
   segInit('segStrict',strict,v=>strict=+v);
   segInit('segView',viewMode,v=>{viewMode=v; layout();});
+  segInit('segBoost',boost,v=>{boost=+v; if(window.__gain) window.__gain.gain.value=boost;});
   pagesEl.classList.toggle('hint',chkHint.checked);
   if(!await loadFonts()){ $('loaderr').textContent='تعذّر تحميل الخط. تأكد من الاتصال بالإنترنت ثم أعد فتح الصفحة.'; return; }
   measure(); layout();
