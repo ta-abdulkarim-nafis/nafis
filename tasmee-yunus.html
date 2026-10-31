@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#1f5f4a">
 <title>تسميع سورة يونس</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Amiri+Quran&display=swap" rel="stylesheet">
 <style>
 :root{--g:#1f5f4a;--g2:#2e7d5b;--bg:#efe9da;--ink:#111;--red:#c62828;--gold:#b8933f}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -48,7 +48,7 @@ body{display:flex;flex-direction:column;height:100dvh}
 .peek .w:not(.shown),.peek .e:not(.shown),.hint .w:not(.shown),.hint .e:not(.shown){color:rgba(0,0,0,.17)}
 .surabox{flex:1;display:flex;justify-content:center;align-items:center;height:calc(var(--lh)*.92);background-image:var(--orn);background-size:calc(var(--lh)*.92) calc(var(--lh)*.92);background-color:#cfe7c4;border:calc(var(--fs)*.05) solid #2f6b45;box-shadow:inset 0 0 0 calc(var(--fs)*.05) #e8d48f}
 .sura{font-family:Q0;font-size:calc(var(--fs)*.95);color:#1d1d1d;background:#fffef7;border:calc(var(--fs)*.05) solid #2f6b45;box-shadow:0 0 0 calc(var(--fs)*.05) #e8d48f;border-radius:999px;padding:0 1.6em;line-height:1.15}
-.bsm{font-family:Q1;font-size:var(--fs);color:var(--ink)}
+.bsm{font-family:'Amiri Quran',Q1,serif;font-size:calc(var(--fs)*.9);color:var(--ink);line-height:1;white-space:nowrap}
 .pgno{align-self:center;margin-top:calc(var(--fs)*.3);font-family:"Amiri",serif;font-weight:700;font-size:calc(var(--fs)*.48);color:#1d1d1d;line-height:1.2;padding:0 .9em;border:calc(var(--fs)*.04) solid #23573a;border-radius:999px;background:#fffef7;box-shadow:0 0 0 calc(var(--fs)*.05) #c9a64b}
 .f16{font-family:Q16}.f17{font-family:Q17}.f1{font-family:Q1}
 #ov{position:absolute;left:30px;right:30px;bottom:4px;display:flex;flex-direction:column;align-items:center;gap:3px;pointer-events:none;z-index:4}
@@ -97,6 +97,7 @@ body{display:flex;flex-direction:column;height:100dvh}
   <button id="btnSet" aria-label="الإعدادات"><span>⚙</span>إعدادات</button>
   <div class="stat" id="stAyah">الآية ١</div>
   <div class="stat bad" id="stErr">الأخطاء ٠</div>
+  <div class="stat" id="stEng" title="نموذج التلاوة">—</div>
   <button id="btnFrom"><span>↺</span>من آية</button>
   <button id="btnMist"><span>📋</span>أخطائي</button>
   <div id="meter"><button id="mic" aria-label="ابدأ التسميع">🎙</button></div>
@@ -117,6 +118,9 @@ body{display:flex;flex-direction:column;height:100dvh}
     <button data-v="0">حدر (خفيفة)</button><button data-v="1">متوسطة</button><button data-v="2">صارمة</button>
   </div>
   <div class="note">«حدر»: للقراءة السريعة؛ يقبل الكلمة إذا التقط ملامحها العامة، ولا يعدّها خطأً إلا إذا تغيّرت تغيّراً واضحاً.</div>
+  <label>التحقق بنموذج التلاوة</label>
+  <div class="seg" id="segVerify"><button data-v="1">مفعّل (أدق)</button><button data-v="0">متوقف</button></div>
+  <div class="note">نموذج مدرَّب على التلاوة (whisper-base-ar-quran من ترتيل، رخصة مفتوحة) يعمل داخل جهازك. بعد كل نَفَس يراجع ما قرأتَ: يمحو الأحمر الخاطئ، ويلحق بك إن تأخر التتبّع. يُحمَّل أول مرة (نحو ١٠٠ ميغابايت) ثم يُحفظ. الأنسب للابتوب.</div>
   <label>تقوية صوت القارئ (للقراءة من بُعد)</label>
   <div class="seg" id="segBoost"><button data-v="1">عادي</button><button data-v="2">متوسط</button><button data-v="3.5">قوي</button></div>
   <div class="note">الحلقة الخضراء حول زر الميكروفون تتحرك مع صوتك؛ إن كانت ضعيفة وأنت بعيد فاختر «قوي».</div>
@@ -235,7 +239,7 @@ DATA.forEach((pg,pi)=>{
     line.forEach(w=>{
       const s=document.createElement('span'); s.textContent=w.c;
       if(w.k==='s'){ s.className='sura'; const bx=document.createElement('span'); bx.className='surabox'; bx.appendChild(s); ld.classList.add('center'); ld.appendChild(bx); return; }
-      else if(w.k==='b'){s.className='bsm'; ld.classList.add('center');}
+      else if(w.k==='b'){s.className='bsm'; s.textContent='بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ'; ld.classList.add('center');}
       else if(w.x){ s.className='x f'+w.f; }
       else{
         s.className=(w.k==='w'?'w':w.k==='e'?'e':'q')+' f'+w.f;
@@ -253,7 +257,7 @@ DATA.forEach((pg,pi)=>{
 /* ---------- state ---------- */
 let j=0, mistakes=[], viewPage=1, fresh=true, viewMode='auto', twoUp=false;
 const LS='tasmee_yunus_v3';
-function getOpts(){return {hint:chkHint.checked,cur:chkCur.checked,vib:chkVib.checked,beep:chkBeep.checked,view:viewMode,boost};}
+function getOpts(){return {hint:chkHint.checked,cur:chkCur.checked,vib:chkVib.checked,beep:chkBeep.checked,view:viewMode,boost,verify:verifyOn};}
 function save(){ try{localStorage.setItem(LS,JSON.stringify({j,mistakes,strict,opt:getOpts()}));}catch(_){} }
 function reveal(i){
   const w=words[i]; w.el.classList.add('shown'); w.el.classList.remove('cur','err','hintw');
@@ -369,6 +373,9 @@ function resync(toks,i,isFinal){
 function trun(toks,ti,wj,n){ for(let k=0;k<n;k++){ if(ti+k>=toks.length||wj+k<0||wj+k>=words.length||!tight(toks[ti+k],words[wj+k].n)) return false; } return true; }
 // find where the reader is: forward (skipped/wrong words) or backward (re-reading)
 function findAnchor(toks,i){
+  for(let di=1; di<=3 && i+di<toks.length; di++){                       // noise words, then the expected word
+    const ti=i+di; if(same(toks[ti],words[j].n) && (ti===toks.length-1 || run(toks,ti+1,j+1,1))) return {ti,wj:j};
+  }
   for(let c=1;c<=9;c++) for(let di=0;di<=Math.min(c,4);di++){          // near ahead
     const dw=c-di, ti=i+di, wj=j+dw;
     if(ti>=toks.length || wj>=words.length || dw>6) continue;
@@ -380,6 +387,7 @@ function findAnchor(toks,i){
     for(let wj=j-1; wj>=Math.max(0,j-300); wj--){ if(trun(toks,ti,wj,(j-wj)<=30?2:3)) return {ti,wj}; }
   return null;
 }
+let vLock=0;
 let carry=[], carryTimer=null;
 function clearCarry(){ carry=[]; clearTimeout(carryTimer); }
 let finDone=0, intDone=0;               // tokens already handled: from final results / from the live (interim) part
@@ -392,6 +400,9 @@ function runInterim(toks,from){
     if(c){ i+=c.used; if(c.adv) advance(c.adv); continue; }
     const r=resync(toks,i,false);
     if(r && r.why!=='split'){ i+=r.used; if(r.adv) advance(r.adv); continue; }
+    let near=null;
+    for(let ti=i; ti<Math.min(toks.length-3,i+3) && !near; ti++) for(let wj=j+1; wj<=Math.min(words.length-3,j+3); wj++) if(trun(toks,ti,wj,3)){ near={ti,wj}; break; }
+    if(near){ markWrong(near.wj-j, toks.slice(i,near.ti).join(' ')); i=near.ti; continue; }
     let far=null;
     for(let ti=i; ti<Math.min(toks.length-2,i+3) && !far; ti++) for(let wj=j+4; wj<Math.min(words.length,j+90); wj++) if(trun(toks,ti,wj,3)){ far={ti,wj}; break; }
     if(far){ markUnheard(far.wj-j); i=far.ti; continue; }
@@ -405,6 +416,7 @@ function runFinal(vt){
   while(i<vt.length && j<words.length){
     const c=consumeOne(vt,i);
     if(c){ i+=c.used; if(c.adv) advance(c.adv); continue; }
+    if(Date.now()<vLock){ i++; continue; }                         // stale words just after a verifier correction
     let back=-1; for(let wj=j-1; wj>=Math.max(0,j-30); wj--) if(trun(vt,i,wj,2)){ back=wj; break; }
     if(back>=0){ note+=' [رجوع إلى '+words[back].n+']'; jumpBack(back); continue; }
     const r=resync(vt,i,true);
@@ -426,6 +438,7 @@ function processEvent(finalText, interimText){
   const fin=tokenize(finalText), live=tokenize(interimText);
   $('heard').textContent = (finalText+' '+interimText).trim() ? 'سمعتُ: '+(finalText.split(/\s+/).slice(-6).join(' ')+' '+interimText).trim() : '';
   if(fin.length<finDone){ finDone=0; intDone=0; }               // recognizer started over
+  if(Date.now()<vLock){ finDone=fin.length; intDone=live.length; return; }   // words heard before the verifier's correction
   const newly=fin.slice(finDone);
   if(newly.length){
     const skip=Math.min(intDone,newly.length);                // these were already followed while still live
@@ -455,7 +468,7 @@ let boost=2;
 async function openMic(){
   try{
     micStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true,channelCount:1}});
-    actxIn=new (window.AudioContext||window.webkitAudioContext)();
+    try{ actxIn=new (window.AudioContext||window.webkitAudioContext)({sampleRate:16000}); }catch(_){ actxIn=new (window.AudioContext||window.webkitAudioContext)(); }
     const src=actxIn.createMediaStreamSource(micStream);
     const hp=actxIn.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=110;     // remove hum / fan / traffic rumble
     const lp=actxIn.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=7000;     // remove hiss above the voice
@@ -465,6 +478,7 @@ async function openMic(){
     analyser=actxIn.createAnalyser(); analyser.fftSize=512;
     const dst=actxIn.createMediaStreamDestination();
     src.connect(hp); hp.connect(lp); lp.connect(pk); pk.connect(comp); comp.connect(g); g.connect(dst); g.connect(analyser);
+    if(verifyOn){ const sp=actxIn.createScriptProcessor(2048,1,1); sp.onaudioprocess=e=>vadFrame(e.inputBuffer.getChannelData(0),actxIn.sampleRate); g.connect(sp); const mute=actxIn.createGain(); mute.gain.value=0; sp.connect(mute); mute.connect(actxIn.destination); window.__sp=sp; }
     procTrack=dst.stream.getAudioTracks()[0];
     runMeter();
   }catch(e){ console.warn('mic pipeline unavailable',e); procTrack=null; }
@@ -479,6 +493,119 @@ function runMeter(){
   const buf=new Uint8Array(analyser.fftSize);
   const tick=()=>{ if(!analyser) return; analyser.getByteTimeDomainData(buf); let m=0; for(const v of buf) m=Math.max(m,Math.abs(v-128)); $('meter').style.setProperty('--lv',Math.min(1,m/70).toFixed(2)); meterRaf=requestAnimationFrame(tick); };
   tick();
+}
+
+/* ---------- verifier: the Quran-recitation model (whisper-base-ar-quran) as a second opinion ---------- */
+let verifyOn=!/Android|iPhone|iPad/i.test(navigator.userAgent);
+let vWorker=null, vState='off', vQueue=[], vBusy=false, vId=0;
+const V_MODEL='aaqibhabib/whisper-base-ar-quran-onnx';
+function vStatus(s){ vState=s; const el=$('stEng'); if(el) el.textContent=s; }
+function startVerifier(){
+  if(vWorker || !verifyOn) return;
+  const code=`
+    import {pipeline, env} from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1/+esm';
+    env.allowLocalModels=false;
+    try{ env.backends.onnx.wasm.numThreads = self.crossOriginIsolated ? Math.max(1,Math.min(6,(navigator.hardwareConcurrency||4)-1)) : 1; }catch(_){}
+    let asr=null;
+    self.onmessage=async ({data:m})=>{
+      if(m.type==='load'){
+        try{
+          const seen={};
+          asr=await pipeline('automatic-speech-recognition','${V_MODEL}',{device:'wasm',dtype:'q8',
+            progress_callback:p=>{ if(p.status==='progress'&&p.total){ seen[p.file]=[p.loaded,p.total]; let a=0,b=0; for(const k in seen){a+=seen[k][0];b+=seen[k][1];} self.postMessage({type:'progress',pct:Math.round(100*a/b)}); } }});
+          self.postMessage({type:'ready',threads:env.backends.onnx.wasm.numThreads});
+        }catch(e){ self.postMessage({type:'error',msg:String(e&&e.message||e)}); }
+      } else if(m.type==='run'){
+        const t0=performance.now();
+        try{ const out=await asr(m.audio); self.postMessage({type:'text',id:m.id,text:out.text,ms:performance.now()-t0}); }
+        catch(e){ self.postMessage({type:'text',id:m.id,text:'',ms:0,err:String(e)}); }
+      }
+    };`;
+  try{
+    vWorker=new Worker(URL.createObjectURL(new Blob([code],{type:'text/javascript'})),{type:'module'});
+  }catch(e){ vStatus('غير متاح'); return; }
+  vStatus('تحميل…');
+  vWorker.onmessage=({data:m})=>{
+    if(m.type==='progress') vStatus('تحميل '+AR(m.pct)+'٪');
+    else if(m.type==='ready'){ vStatus('جاهز'); logDiag('(نموذج التلاوة جاهز، خيوط: '+m.threads+')',true,''); pumpV(); }
+    else if(m.type==='error'){ vStatus('تعذّر'); logDiag('(تعذّر تحميل نموذج التلاوة: '+m.msg+')',true,''); }
+    else if(m.type==='text'){ vBusy=false; const job=vJobs[m.id]; delete vJobs[m.id]; if(job) applyVerify(job,m.text,m.ms); pumpV(); }
+  };
+  vWorker.postMessage({type:'load'});
+}
+const vJobs={};
+function pumpV(){
+  if(vBusy || vState!=='جاهز' && vState!=='يعمل' || !vQueue.length) return;
+  // if we fall behind, merge waiting segments so the model catches up
+  while(vQueue.length>1 && vQueue[0].audio.length+vQueue[1].audio.length < 16000*14){
+    const a=vQueue.shift(), b=vQueue.shift(); const m=new Float32Array(a.audio.length+b.audio.length); m.set(a.audio); m.set(b.audio,a.audio.length);
+    vQueue.unshift({audio:m,jStart:a.jStart});
+  }
+  const job=vQueue.shift(); const id=++vId; vJobs[id]=job; vBusy=true; vStatus('يعمل');
+  vWorker.postMessage({type:'run',id,audio:job.audio},[job.audio.buffer]);
+}
+// voice-activity segmentation
+let vad={inSeg:false,buf:[],len:0,sil:0,nf:0.01,pre:[],jStart:0};
+function vadFrame(x,rate){
+  if(!listening || !verifyOn) return;
+  let s=0; for(let k=0;k<x.length;k++) s+=x[k]*x[k]; const rms=Math.sqrt(s/x.length);
+  const speech = rms > Math.max(vad.nf*3, 0.012);
+  if(!speech) vad.nf = vad.nf*0.98 + rms*0.02;
+  const fr=new Float32Array(x);
+  const frameSec=x.length/rate;
+  if(!vad.inSeg){
+    vad.pre.push(fr); if(vad.pre.length>3) vad.pre.shift();
+    if(speech){ vad.inSeg=true; vad.buf=vad.pre.slice(); vad.len=vad.buf.reduce((a,b)=>a+b.length,0); vad.sil=0; vad.pre=[]; vad.jStart=j; }
+    return;
+  }
+  vad.buf.push(fr); vad.len+=fr.length; vad.sil = speech?0:vad.sil+frameSec;
+  if(vad.sil>=0.55 || vad.len>=rate*9){ endSeg(rate); }
+}
+function endSeg(rate){
+  const n=vad.len; const out=new Float32Array(n); let o=0; for(const f of vad.buf){ out.set(f,o); o+=f.length; }
+  const job={audio: rate===16000?out:resample(out,rate,16000), jStart:vad.jStart};
+  vad.inSeg=false; vad.buf=[]; vad.len=0; vad.sil=0;
+  if(job.audio.length>16000*0.6){ vQueue.push(job); pumpV(); }
+}
+function resample(x,from,to){ const r=from/to, n=Math.floor(x.length/r), y=new Float32Array(n); for(let k=0;k<n;k++){ y[k]=x[Math.floor(k*r)]; } return y; }
+// align the model's words with the mushaf near where that segment began, then correct the page
+function applyVerify(job,text,ms){
+  const toks=tokenize(text.replace(/[٠-٩\d]/g,' '));
+  if(!toks.length){ vStatus('جاهز'); return; }
+  const a=Math.max(0,job.jStart-6), b=Math.min(words.length, Math.max(j,job.jStart)+60);
+  const W=words.slice(a,b).map(w=>w.n), n=toks.length, m=W.length;
+  // DP: free start within the first 25 words, free end; match=0, mismatch=1, gaps=1
+  const INF=1e9, D=Array.from({length:n+1},()=>new Float64Array(m+1).fill(INF)), P=Array.from({length:n+1},()=>new Int8Array(m+1));
+  for(let y=0;y<=Math.min(m,25);y++) D[0][y]=0;
+  for(let x=1;x<=n;x++) for(let y=0;y<=m;y++){
+    let best=D[x-1][y]+1, p=1;                                       // extra token
+    if(y>0){ const c=D[x-1][y-1]+(same(toks[x-1],W[y-1])?0:1); if(c<best){best=c;p=2;}
+             const d=D[x][y-1]+1; if(d<best){best=d;p=3;} }           // missing word
+    D[x][y]=best; P[x][y]=p;
+  }
+  let endY=0, bestC=INF; for(let y=0;y<=m;y++) if(D[n][y]+ (y===0?5:0) < bestC){ bestC=D[n][y]; endY=y; }
+  if(bestC > n*0.6){ logDiag('[تحقق] '+text,true,' [لم يتطابق]'); vStatus('جاهز'); return; }
+  const matched=new Map(); let x=n,y=endY;
+  while(x>0 && y>0){ const p=P[x][y]; if(p===2){ matched.set(a+y-1, same(toks[x-1],W[y-1])); x--; y--; } else if(p===1) x--; else { matched.set(a+y-1,false); y--; } }
+  const idxs=[...matched.keys()].sort((p,q)=>p-q); if(!idxs.length){ vStatus('جاهز'); return; }
+  const first=idxs[0], last=idxs[idxs.length-1];
+  let fixed=0, newRed=0;
+  for(const i of idxs){
+    const w=words[i], ok=matched.get(i);
+    if(ok){
+      if(w.mist){ w.mist=false; w.el.classList.remove('missed'); const k=mistakes.findIndex(q=>q.i===i); if(k>=0) mistakes.splice(k,1); fixed++; }
+      w.el.classList.remove('unheard');
+      if(i>=j) reveal(i);
+    } else if(i>=j || w.el.classList.contains('unheard')){
+      // neither engine heard this word right
+      if(!w.mist){ w.mist=true; mistakes.push({i,v:w.v,t:w.t,h:'(نموذج التلاوة)'}); newRed++; }
+      reveal(i); w.el.classList.remove('unheard'); w.el.classList.add('missed');
+    }
+  }
+  let moved=0;
+  if(last+1>j){ moved=last+1-j; clearGreens(); j=last+1; vLock=Date.now()+3500; resetStream(); clearCarry(); if(j>=words.length) finish(); }
+  logDiag('[تحقق '+(ms/1000).toFixed(1)+'ث] '+text,true,(fixed?' [صُحّح: '+fixed+']':'')+(newRed?' [أحمر: '+newRed+']':'')+(moved?' [تقدّم: '+moved+']':''));
+  vStatus('جاهز'); updateUI(true); save();
 }
 
 /* ---------- speech recognition ---------- */
@@ -519,6 +646,7 @@ async function startListening(){
   listening=true; $('mic').classList.add('on'); setMsg('أنا أستمع… اقرأ من حفظك','ok');
   try{ wake=await navigator.wakeLock.request('screen'); }catch(_){}
   if(useTrack) await openMic();
+  if(verifyOn) startVerifier();
   lastResultAt=Date.now();
   startRec();
   clearInterval(watchdog);
@@ -527,6 +655,7 @@ async function startListening(){
   },3000);
 }
 function stopListening(){
+  if(vad.inSeg && actxIn) endSeg(actxIn.sampleRate);
   listening=false; $('mic').classList.remove('on'); clearInterval(watchdog);
   try{ rec&&rec.stop(); }catch(_){}
   closeMic();
@@ -597,6 +726,11 @@ function layout(){
 }
 
 /* ---------- boot ---------- */
+if(!window.crossOriginIsolated && 'serviceWorker' in navigator && location.protocol==='https:'){
+  navigator.serviceWorker.register('coi-sw.js').then(r=>{
+    if(!navigator.serviceWorker.controller && !sessionStorage.getItem('coiReload')){ sessionStorage.setItem('coiReload','1'); r.active?location.reload():navigator.serviceWorker.addEventListener('controllerchange',()=>location.reload(),{once:true}); }
+  }).catch(()=>{});
+}
 async function loadFonts(){
   for(const base of FONT_BASES){
     try{ const fs=await Promise.all(Object.entries(FONTS).map(([f,file])=>new FontFace(f,`url(${base}${file})`).load())); fs.forEach(f=>document.fonts.add(f)); return true; }
@@ -607,10 +741,12 @@ async function loadFonts(){
 (async()=>{
   let st={}; try{ st=JSON.parse(localStorage.getItem(LS)||'{}'); }catch(_){}
   if(st.opt&&st.opt.boost) boost=st.opt.boost;
+  if(st.opt&&typeof st.opt.verify==='boolean') verifyOn=st.opt.verify;
   if(st.opt){ chkHint.checked=!!st.opt.hint; chkCur.checked=st.opt.cur!==false; chkVib.checked=!!st.opt.vib; chkBeep.checked=!!st.opt.beep; viewMode=st.opt.view||'auto'; }
   if(typeof st.strict==='number') strict=st.strict;
   segInit('segStrict',strict,v=>strict=+v);
   segInit('segView',viewMode,v=>{viewMode=v; layout();});
+  segInit('segVerify',verifyOn?1:0,v=>{ verifyOn=v==='1'; if(verifyOn&&listening) startVerifier(); $('stEng').textContent=verifyOn?(vState==='off'?'—':vState):'متوقف'; });
   segInit('segBoost',boost,v=>{boost=+v; if(window.__gain) window.__gain.gain.value=boost;});
   pagesEl.classList.toggle('hint',chkHint.checked);
   if(!await loadFonts()){ $('loaderr').textContent='تعذّر تحميل الخط. تأكد من الاتصال بالإنترنت ثم أعد فتح الصفحة.'; return; }
