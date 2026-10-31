@@ -120,7 +120,7 @@ body{display:flex;flex-direction:column;height:100dvh}
   <div class="note">«حدر»: للقراءة السريعة؛ يقبل الكلمة إذا التقط ملامحها العامة، ولا يعدّها خطأً إلا إذا تغيّرت تغيّراً واضحاً.</div>
   <label>التحقق بنموذج التلاوة</label>
   <div class="seg" id="segVerify"><button data-v="1">مفعّل (أدق)</button><button data-v="0">متوقف</button></div>
-  <div class="note">نموذج مدرَّب على التلاوة (whisper-base-ar-quran من ترتيل، رخصة مفتوحة) يعمل داخل جهازك. بعد كل نَفَس يراجع ما قرأتَ: يمحو الأحمر الخاطئ، ويلحق بك إن تأخر التتبّع. يُحمَّل أول مرة (نحو ١٠٠ ميغابايت) ثم يُحفظ. الأنسب للابتوب.</div>
+  <div class="note">نموذج مدرَّب على التلاوة (whisper-base-ar-quran من ترتيل، رخصة مفتوحة) يعمل داخل جهازك. بعد كل نَفَس يراجع ما قرأتَ: يمحو الأحمر الخاطئ، ويلحق بك إن تأخر التتبّع، ولا يضيف أحمر أبداً. يُحمَّل أول مرة (نحو ١٠٠ ميغابايت) ثم يُحفظ. الأنسب للابتوب.</div>
   <label>تقوية صوت القارئ (للقراءة من بُعد)</label>
   <div class="seg" id="segBoost"><button data-v="1">عادي</button><button data-v="2">متوسط</button><button data-v="3.5">قوي</button></div>
   <div class="note">الحلقة الخضراء حول زر الميكروفون تتحرك مع صوتك؛ إن كانت ضعيفة وأنت بعيد فاختر «قوي».</div>
@@ -401,8 +401,8 @@ function runInterim(toks,from){
     const r=resync(toks,i,false);
     if(r && r.why!=='split'){ i+=r.used; if(r.adv) advance(r.adv); continue; }
     let near=null;
-    for(let ti=i; ti<Math.min(toks.length-3,i+3) && !near; ti++) for(let wj=j+1; wj<=Math.min(words.length-3,j+3); wj++) if(trun(toks,ti,wj,3)){ near={ti,wj}; break; }
-    if(near){ markWrong(near.wj-j, toks.slice(i,near.ti).join(' ')); i=near.ti; continue; }
+    for(let ti=i; ti<Math.min(toks.length-2,i+3) && !near; ti++) for(let wj=j+1; wj<=Math.min(words.length-2,j+3); wj++) if(run(toks,ti,wj,2)){ near={ti,wj}; break; }
+    if(near){ markUnheard(near.wj-j); i=near.ti; continue; }
     let far=null;
     for(let ti=i; ti<Math.min(toks.length-2,i+3) && !far; ti++) for(let wj=j+4; wj<Math.min(words.length,j+90); wj++) if(trun(toks,ti,wj,3)){ far={ti,wj}; break; }
     if(far){ markUnheard(far.wj-j); i=far.ti; continue; }
@@ -478,7 +478,7 @@ async function openMic(){
     analyser=actxIn.createAnalyser(); analyser.fftSize=512;
     const dst=actxIn.createMediaStreamDestination();
     src.connect(hp); hp.connect(lp); lp.connect(pk); pk.connect(comp); comp.connect(g); g.connect(dst); g.connect(analyser);
-    if(verifyOn){ const sp=actxIn.createScriptProcessor(2048,1,1); sp.onaudioprocess=e=>vadFrame(e.inputBuffer.getChannelData(0),actxIn.sampleRate); g.connect(sp); const mute=actxIn.createGain(); mute.gain.value=0; sp.connect(mute); mute.connect(actxIn.destination); window.__sp=sp; }
+    if(verifyOn){ const sp=actxIn.createScriptProcessor(2048,1,1); sp.onaudioprocess=e=>vadFrame(e.inputBuffer.getChannelData(0),actxIn.sampleRate); hp.connect(sp); const mute=actxIn.createGain(); mute.gain.value=0; sp.connect(mute); mute.connect(actxIn.destination); window.__sp=sp; }
     procTrack=dst.stream.getAudioTracks()[0];
     runMeter();
   }catch(e){ console.warn('mic pipeline unavailable',e); procTrack=null; }
@@ -537,7 +537,8 @@ const vJobs={};
 function pumpV(){
   if(vBusy || vState!=='جاهز' && vState!=='يعمل' || !vQueue.length) return;
   // if we fall behind, merge waiting segments so the model catches up
-  while(vQueue.length>1 && vQueue[0].audio.length+vQueue[1].audio.length < 16000*14){
+  while(vQueue.length>3) vQueue.shift();
+  while(vQueue.length>1 && vQueue[0].audio.length+vQueue[1].audio.length < 16000*10){
     const a=vQueue.shift(), b=vQueue.shift(); const m=new Float32Array(a.audio.length+b.audio.length); m.set(a.audio); m.set(b.audio,a.audio.length);
     vQueue.unshift({audio:m,jStart:a.jStart});
   }
@@ -588,22 +589,22 @@ function applyVerify(job,text,ms){
   const matched=new Map(); let x=n,y=endY;
   while(x>0 && y>0){ const p=P[x][y]; if(p===2){ matched.set(a+y-1, same(toks[x-1],W[y-1])); x--; y--; } else if(p===1) x--; else { matched.set(a+y-1,false); y--; } }
   const idxs=[...matched.keys()].sort((p,q)=>p-q); if(!idxs.length){ vStatus('جاهز'); return; }
-  const first=idxs[0], last=idxs[idxs.length-1];
-  let fixed=0, newRed=0;
+  const good=idxs.filter(i=>matched.get(i));
+  if(good.length < idxs.length*0.5){ logDiag('[تحقق] '+text,true,' [غير واضح، تجاهلته]'); vStatus('جاهز'); return; }
+  let fixed=0, newRed=0, moved=0, runLen=0, lastRunEnd=-1;
   for(const i of idxs){
-    const w=words[i], ok=matched.get(i);
-    if(ok){
+    if(matched.get(i)){ runLen++; if(runLen>=4) lastRunEnd=i; } else runLen=0;
+    const w=words[i];
+    if(matched.get(i) && i<j){
       if(w.mist){ w.mist=false; w.el.classList.remove('missed'); const k=mistakes.findIndex(q=>q.i===i); if(k>=0) mistakes.splice(k,1); fixed++; }
       w.el.classList.remove('unheard');
-      if(i>=j) reveal(i);
-    } else if(i>=j || w.el.classList.contains('unheard')){
-      // neither engine heard this word right
-      if(!w.mist){ w.mist=true; mistakes.push({i,v:w.v,t:w.t,h:'(نموذج التلاوة)'}); newRed++; }
-      reveal(i); w.el.classList.remove('unheard'); w.el.classList.add('missed');
     }
   }
-  let moved=0;
-  if(last+1>j){ moved=last+1-j; clearGreens(); j=last+1; vLock=Date.now()+3500; resetStream(); clearCarry(); if(j>=words.length) finish(); }
+  if(lastRunEnd+1>j && lastRunEnd+1-j<=40){                      // the reader is clearly further on: follow
+    moved=lastRunEnd+1-j; clearGreens();
+    for(let i=j;i<=lastRunEnd;i++){ reveal(i); if(!matched.get(i)) words[i].el.classList.add('unheard'); }
+    j=lastRunEnd+1; vLock=Date.now()+3000; resetStream(); clearCarry(); if(j>=words.length) finish();
+  }
   logDiag('[تحقق '+(ms/1000).toFixed(1)+'ث] '+text,true,(fixed?' [صُحّح: '+fixed+']':'')+(newRed?' [أحمر: '+newRed+']':'')+(moved?' [تقدّم: '+moved+']':''));
   vStatus('جاهز'); updateUI(true); save();
 }
